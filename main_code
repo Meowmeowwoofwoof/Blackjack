@@ -4,6 +4,7 @@ void card(int);
 char face(int);
 int royalty(int,int);
 int player_turn(int,int);
+int save(int);
 int hit(void);
 void winner(int, int, int);
 #define TRUE 1 /*defines player turn*/
@@ -17,7 +18,7 @@ char cont, turn;
 srand(time(NULL));
 
 printf("Start Game? (y to start any other key to end)\n");
-scanf("%c", &cont);
+scanf(" %c", &cont);
 
 while (cont == 'y')
         {
@@ -26,11 +27,15 @@ while (cont == 'y')
         printf("Dealer's cards are\n");
         dealer_initial = gen(FALSE);
         if (dealer_initial == 11) dealer_aces++;
-        dealer_new = rand() % 13 + 1;
+        dealer_new = royalty(rand() % 13 + 1,FALSE);
         if (dealer_new == 11) dealer_aces++;
         card(FALSE);
-        dealer_current = dealer_initial + royalty(dealer_new,FALSE);
-
+        dealer_current = dealer_initial + dealer_new;
+        if (dealer_current > 21)
+                {
+                dealer_current = dealer_current - 10;
+                dealer_aces--;
+                }
 #ifdef DEBUG 
 printf("Hidden card is %d\n", dealer_new);
 #endif
@@ -41,8 +46,13 @@ printf("Hidden card is %d\n", dealer_new);
         player_new = gen(TRUE);
         if (player_new == 11) player_aces++;
         player_current = player_current + player_new;
+        if (player_current > 21)
+                {
+                player_current = save(player_current);
+                player_aces--;
+                }
 
-        if (player_current == 21 || dealer_current == 21)
+        if (player_current >= 21 || dealer_current >= 21)
                 {
                 printf("Dealer got\n");
                 card(dealer_initial);
@@ -68,10 +78,12 @@ printf("%d %d\n", player_current, dealer_current);
                 }
         printf("Play Again? (y to start any other key to end)\n");
 
-        scanf("%c", &cont);
-        scanf("%c", &cont);
+        scanf(" %c", &cont);
 }
 }
+
+
+
 /*Generates cards and values TRUE = player FALSE = dealer*/
 int gen(int who)
 {
@@ -105,6 +117,9 @@ else
         printf("******\n*%c   *\n*    *\n*   %c*\n******\n",card_face, card_face);
         }
 }
+
+
+
 /*Changes 1->A and 11-13 into face cards*/
 char face(int value)
 {
@@ -116,7 +131,6 @@ if (value == FALSE) {return '?';}
 }
 
 
-
 /*Sets proper values for calculations*/
 int royalty(int A, int B)
 {
@@ -125,7 +139,8 @@ if (A == 1 && B == TRUE)
         {
         printf("Do you want Ace to be 1 or 11\n");
         scanf("%d", &A);
-        while( A != 1 || A != 11)
+        if( A == 1 || A == 11) return A;
+        while (A != 1 || A != 11)
                 {
                 printf("Value not valid please input 1 or 11\n");
                 scanf("%d", &A);
@@ -143,40 +158,36 @@ return A;
 int player_turn(int player_current, int ace)
 {
 int player_new, hits;
-char save;
 
 hits = hit();
+
 while (hits == TRUE)
         {
         player_new = gen(TRUE);
         player_current = player_current + player_new;
         if (player_new == 11) ace++;
 
-        if (player_current <= 21)
+        while (player_current > 21 && ace > 0)
                 {
-                hits = hit();
+                player_current = save(player_current);
+                ace--;
                 }
-        else if (player_current > 21 && ace > 0)
-                {
-                while (player_current > 21 && ace > 0)
-                        {
-                        printf("Current value will bust, attempt to save self by turning Ace into 1? (y to turn Ace->1 any other key to ignore)");
-                        scanf("%c", &save);
-                        scanf("%c", &save);
-                        if (save == 'y') player_current = player_current - 10;
-                        else ace = 0;
-                        ace--;
-
-#ifdef DEBUG
-printf("Aces = %d\n", ace);
-#endif
-
-                        }
-                hits = hit();
-                }
+        if (player_current <= 21) hits = hit();
         if(player_current > 21) hits = FALSE;
         }
 return player_current;
+}
+
+
+
+/*Saves player/dealer if Ace as 11 exists, also deals with annoying case if both dealer and player have two aces at 11*/
+int save(int total)
+{
+char yes;
+printf("Current value will bust, attempt to save self by turning Ace into 1? (y to turn Ace->1 any other key to ignore)");
+scanf(" %c", &yes);
+if (yes == 'y') total = total - 10;
+return total;
 }
 
 
@@ -186,8 +197,7 @@ int hit(void)
 {
 char turn;
 printf("Hit? (y to hit, any other key to stand)\n");
-scanf("%c", &turn);
-scanf("%c", &turn);
+scanf(" %c", &turn);
 if (turn == 'y') return TRUE;
 else return FALSE;
 }
